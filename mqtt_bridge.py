@@ -1,10 +1,11 @@
 # ros
+from typing import Any
 import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.logging import set_logger_level, LoggingSeverity
-
+from rclpy.client import Client as rclClient, SrvType, SrvTypeRequest, SrvTypeResponse
 # others
 import base64
 import hydra
@@ -13,10 +14,10 @@ import cv2
 import paho.mqtt.client as mqtt
 from omegaconf import DictConfig, OmegaConf
 import ros_serializers
-
+from functools import partial
 
 class MQTTBridge(Node):
-    def __init__(self, cfg):
+    def __init__(self, cfg: DictConfig):
         super().__init__("mqtt_bridge")
         set_logger_level(
             name="", level=getattr(LoggingSeverity, cfg["logging_severity"])
@@ -26,21 +27,24 @@ class MQTTBridge(Node):
         self.mqtt_client = self.get_mqtt_client()
         self.mqtt_client.loop_start()
         self.ros_subscribers = {}
-        self.ros_service_clients = {}
+        self.ros_service_clients: dict[str, rclClient]= {}
 
         # ros2mqtt (topic2topic)
         for ros_topic in cfg["ros2mqtt"]["topic2topic"].keys():
-            ros2mqtt = cfg["ros2mqtt"]["topic2topic"][ros_topic]
-            ros_type = ros2mqtt["ros_type"]
-            mqtt_topic = ros2mqtt["to"]
-            converter = ros2mqtt["converter"]
+            ros2mqtt: str = cfg["ros2mqtt"]["topic2topic"][ros_topic]
+            ros_type_name: str = ros2mqtt["ros_type"]
+            mqtt_topic: str = ros2mqtt["to"]
+            converter: str = ros2mqtt["converter"]
+            try:
+                ros_type: SrvType = hydra.utils.get_class(ros_type_name)
+            except ModuleNotFoundError:
+                self.get_logger().error(f"The ros message type {ros_type_name} could not be found")
+                raise
 
             self.create_subscription(
-                hydra.utils.get_class(ros2mqtt["ros_type"]),
+                ros_type,
                 ros_topic,
-                lambda msg, ros_topic=ros_topic, topic=mqtt_topic, converter=converter: self.ros_callback(
-                    msg, topic, converter, ros_topic
-                ),
+                partial(self.ros_callback, mqtt_topic=mqtt_topic, converter=converter, ros_topic=ros_topic),
                 qos_profile=rclpy.qos.qos_profile_sensor_data,
             )
             self.get_logger().info(f"bridge <-  [ROS][topic]   {ros_topic}")
@@ -49,11 +53,15 @@ class MQTTBridge(Node):
         # mqtt2ros (topic2service)
         self.cb_group = ReentrantCallbackGroup()
         for mqtt_topic in self.cfg["mqtt2ros"]["topic2service"].keys():
-            topic2service = self.cfg["mqtt2ros"]["topic2service"][mqtt_topic]
-            ros_service = topic2service["to"]
-            mqtt_response_topic = topic2service["response"]
-            ros_type = hydra.utils.get_class(topic2service["ros_type"])
-
+            topic2service: dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][mqtt_topic]
+            ros_service: str = topic2service["to"]
+            mqtt_response_topic: str = topic2service["response"]
+            ros_type_name: str = topic2service["ros_type"] 
+            try:
+                ros_type: SrvType = hydra.utils.get_class(ros_type_name)
+            except ModuleNotFoundError:
+                self.get_logger().error(f"The ros message type {ros_type_name} could not be found")
+                raise
             self.mqtt_client.subscribe(mqtt_topic)
             self.ros_service_clients[mqtt_topic] = self.create_client(
                 ros_type, ros_service, callback_group=self.cb_group
@@ -62,6 +70,8 @@ class MQTTBridge(Node):
             self.get_logger().info(f"bridge <-  [MQTT][topic]  {mqtt_topic}")
             self.get_logger().info(f"       <-> [ROS][service] {ros_service}")
             self.get_logger().info(f"       ->  [MQTT][topic]  {mqtt_response_topic}")
+        
+
 
     def ros_callback(self, msg, mqtt_topic, converter, ros_topic):
         self.get_logger().debug(f"Received [ROS][topic]: {ros_topic}")
@@ -83,24 +93,24 @@ class MQTTBridge(Node):
         )
         return client
 
-    def on_mqtt_connect(self, mqtt_client, userdata, flags, rc):
+    def on_mqtt_connect(self, mqtt_client: mqtt.Client, userdata: Any, flags: dict, rc: int):
         self.get_logger().info("Connected successfully to MQTT Broker")
 
-    def on_mqtt_message(self, mqtt_client, userdata, msg):
+    def on_mqtt_message(self, mqtt_client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage):
         self.get_logger().debug(f"Received [MQTT][topic]: {msg.topic}")
         if msg.topic in self.cfg["mqtt2ros"]["topic2service"].keys():
             decoded_data = json.loads(msg.payload)
 
-            topic2service = self.cfg["mqtt2ros"]["topic2service"][msg.topic]
-            ros_service = topic2service["to"]
-            mqtt_response_topic = topic2service["response"]
+            topic2service: str = self.cfg["mqtt2ros"]["topic2service"][msg.topic]
+            ros_service: str = topic2service["to"]
+            mqtt_response_topic: str = topic2service["response"]
 
-            req = hydra.utils.get_class(topic2service["ros_type"]).Request()
+            req: SrvTypeRequest = hydra.utils.get_class(topic2service["ros_type"]).Request()
             for key, value in decoded_data.items():
                 setattr(req, key, value)
 
             self.get_logger().debug(f"Called [ROS][service]: {ros_service}")
-            response = self.ros_service_clients[msg.topic].call(req)
+            response = self.ros_service_clients[msg.topic].call(req) # since it is running on another thread blocking is allowed (different thread than the ros spin)
             self.get_logger().debug(f"Received Response [ROS][service]: {ros_service}")
             self.mqtt_client.publish(
                 mqtt_response_topic,

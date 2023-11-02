@@ -1,5 +1,6 @@
+from rclpy.publisher import MsgType
 
-def primitive_serializer(msg):
+def primitive_serializer(msg: MsgType):
     return {
         field: (
             primitive_serializer(getattr(msg, field))
