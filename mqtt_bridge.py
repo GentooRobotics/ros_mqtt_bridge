@@ -6,6 +6,7 @@ from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.logging import set_logger_level, LoggingSeverity
 from rclpy.client import Client as rclClient, SrvType, SrvTypeRequest, SrvTypeResponse
+from rclpy.publisher import MsgType, Publisher as rclPublisher
 # others
 import base64
 import hydra
@@ -27,6 +28,7 @@ class MQTTBridge(Node):
         self.mqtt_client = self.get_mqtt_client()
         self.mqtt_client.loop_start()
         self.ros_subscribers = {}
+        self.ros_topic_publishers: dict[str, rclPublisher]= {}
         self.ros_service_clients: dict[str, rclClient]= {}
 
         # ros2mqtt (topic2topic)
@@ -49,6 +51,23 @@ class MQTTBridge(Node):
             )
             self.get_logger().info(f"bridge <-  [ROS][topic]   {ros_topic}")
             self.get_logger().info(f"       ->  [MQTT][topic]  {mqtt_topic}")
+
+        for mqtt_topic in self.cfg["mqtt2ros"]["topic2topic"].keys():
+            topic2topic: dict[str, str] = self.cfg["mqtt2ros"]["topic2topic"][mqtt_topic]
+            ros_topic: str = topic2topic["to"]
+            ros_type_name: str = topic2topic["ros_type"] 
+            try:
+                ros_type: MsgType = hydra.utils.get_class(ros_type_name)
+            except ModuleNotFoundError:
+                self.get_logger().error(f"The ros message type {ros_type_name} could not be found")
+                raise
+            self.mqtt_client.subscribe(mqtt_topic)
+            self.ros_topic_publishers[mqtt_topic] = self.create_publisher(
+                ros_type, ros_topic, qos_profile=rclpy.qos.qos_profile_sensor_data
+            )
+
+            self.get_logger().info(f"bridge <-  [MQTT][topic]  {mqtt_topic}")
+            self.get_logger().info(f"       ->  [ROS][topic] {ros_topic}")
 
         # mqtt2ros (topic2service)
         self.cb_group = ReentrantCallbackGroup()
@@ -98,7 +117,25 @@ class MQTTBridge(Node):
 
     def on_mqtt_message(self, mqtt_client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage):
         self.get_logger().debug(f"Received [MQTT][topic]: {msg.topic}")
-        if msg.topic in self.cfg["mqtt2ros"]["topic2service"].keys():
+        if msg.topic in self.cfg["mqtt2ros"]["topic2topic"].keys():
+            decoded_data = json.loads(msg.payload)
+
+            topic2topic: str = self.cfg["mqtt2ros"]["topic2topic"][msg.topic]
+            ros_topic: str = topic2topic["to"]
+            ros_msg_type: str = topic2topic["ros_type"]
+
+            ros_msg: MsgType  = hydra.utils.get_class(ros_msg_type)() # create the message object
+            for key, value in decoded_data.items():
+                if hasattr(ros_msg, key):
+                    setattr(ros_msg, key, value)
+                else:
+                    self.get_logger().error(f"The ros topic {ros_topic} with message type {ros_msg_type} has no attribute {key}")
+                    return
+
+            self.ros_topic_publishers[msg.topic].publish(ros_msg) 
+            self.get_logger().debug(f"Publish [ROS][topic]: {ros_topic}")
+            
+        elif msg.topic in self.cfg["mqtt2ros"]["topic2service"].keys():
             decoded_data = json.loads(msg.payload)
 
             topic2service: str = self.cfg["mqtt2ros"]["topic2service"][msg.topic]

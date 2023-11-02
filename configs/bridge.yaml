@@ -17,6 +17,11 @@ ros2mqtt:
       converter: image_serializer
 
 mqtt2ros:
+  topic2topic:
+    number:
+      to: /number
+      ros_type: std_msgs.msg.Int32
+      
   topic2service:
     backend/start_mapping:
       to: /bt/start_mapping
@@ -30,4 +35,3 @@ mqtt2ros:
       to: /bt/save_map
       ros_type: robot_slam_msgs.srv.BTSaveMap
       response: bt/save_map_response  
-    
