@@ -10,7 +10,6 @@ ros2mqtt:
     /chatter:
       to: chatter
       ros_type: std_msgs.msg.String
-      converter: primitive_serializer
     /map_with_laser:
       to: map_with_laser
       ros_type: sensor_msgs.msg.Image

@@ -1,7 +1,6 @@
 # ros
 from typing import Any
 import rclpy
-from cv_bridge import CvBridge
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.logging import set_logger_level, LoggingSeverity
@@ -13,8 +12,9 @@ import hydra
 import json
 import cv2
 import paho.mqtt.client as mqtt
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 import ros_serializers
+from ros_serializers.message_converter import convert_dictionary_to_ros_message, convert_ros_message_to_dictionary
 from functools import partial
 
 class MQTTBridge(Node):
@@ -36,7 +36,7 @@ class MQTTBridge(Node):
             ros2mqtt: str = cfg["ros2mqtt"]["topic2topic"][ros_topic]
             ros_type_name: str = ros2mqtt["ros_type"]
             mqtt_topic: str = ros2mqtt["to"]
-            converter: str = ros2mqtt["converter"]
+            converter: str = ros2mqtt.get("converter", "")
             try:
                 ros_type: SrvType = hydra.utils.get_class(ros_type_name)
             except ModuleNotFoundError:
@@ -94,8 +94,13 @@ class MQTTBridge(Node):
 
     def ros_callback(self, msg, mqtt_topic, converter, ros_topic):
         self.get_logger().debug(f"Received [ROS][topic]: {ros_topic}")
+
+        if hasattr(ros_serializers, converter):
+            convert = getattr(ros_serializers, converter)
+        else:
+            convert = convert_ros_message_to_dictionary
         self.mqtt_client.publish(
-            mqtt_topic, json.dumps(getattr(ros_serializers, converter)(msg))
+            mqtt_topic, json.dumps(convert(msg))
         )
 
         self.get_logger().debug(f"Published [MQTT][topic]: {mqtt_topic}")
@@ -111,7 +116,7 @@ class MQTTBridge(Node):
             keepalive=self.cfg["mqtt_broker"]["keepalive"],
         )
         return client
-
+    
     def on_mqtt_connect(self, mqtt_client: mqtt.Client, userdata: Any, flags: dict, rc: int):
         self.get_logger().info("Connected successfully to MQTT Broker")
 
@@ -122,15 +127,12 @@ class MQTTBridge(Node):
 
             topic2topic: str = self.cfg["mqtt2ros"]["topic2topic"][msg.topic]
             ros_topic: str = topic2topic["to"]
-            ros_msg_type: str = topic2topic["ros_type"]
-
-            ros_msg: MsgType  = hydra.utils.get_class(ros_msg_type)() # create the message object
-            for key, value in decoded_data.items():
-                if hasattr(ros_msg, key):
-                    setattr(ros_msg, key, value)
-                else:
-                    self.get_logger().error(f"The ros topic {ros_topic} with message type {ros_msg_type} has no attribute {key}")
-                    return
+            ros_msg_typename: str = topic2topic["ros_type"]
+            try:
+                ros_msg: MsgType = convert_dictionary_to_ros_message(hydra.utils.get_class(ros_msg_typename), decoded_data)
+            except AttributeError as e:
+                self.get_logger().error(e)
+                return
 
             self.ros_topic_publishers[msg.topic].publish(ros_msg) 
             self.get_logger().debug(f"Publish [ROS][topic]: {ros_topic}")
@@ -142,16 +144,17 @@ class MQTTBridge(Node):
             ros_service: str = topic2service["to"]
             mqtt_response_topic: str = topic2service["response"]
 
-            req: SrvTypeRequest = hydra.utils.get_class(topic2service["ros_type"]).Request()
-            for key, value in decoded_data.items():
-                setattr(req, key, value)
-
+            try:
+                req: SrvTypeRequest = convert_dictionary_to_ros_message(hydra.utils.get_class(topic2service["ros_type"]).Request, decoded_data)
+            except AttributeError as e:
+                self.get_logger().error(e)
+                return
             self.get_logger().debug(f"Called [ROS][service]: {ros_service}")
             response = self.ros_service_clients[msg.topic].call(req) # since it is running on another thread blocking is allowed (different thread than the ros spin)
             self.get_logger().debug(f"Received Response [ROS][service]: {ros_service}")
             self.mqtt_client.publish(
                 mqtt_response_topic,
-                json.dumps(ros_serializers.primitive_serializer(response)),
+                json.dumps(convert_ros_message_to_dictionary(response)),
             )
             self.get_logger().debug(f"Published [MQTT][topic]: {mqtt_response_topic}")
 
