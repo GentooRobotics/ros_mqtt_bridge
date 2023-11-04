@@ -3,7 +3,7 @@
 This is a ROS package that allows two ways bridging between ROS & MQTT protocols. MQTT Bridge supports 4 types of bridging.
 - `ROS topic -> MQTT topic`
 - `ROS service -> MQTT topic [TO DO]`
-- `MQTT topic -> ROS topic [TO DO]`
+- `MQTT topic -> ROS topic`
 - `MQTT topic -> ROS service`
 
 ### Config
@@ -15,10 +15,18 @@ ros2mqtt:
     /chatter: # ROS topic
       to: chatter # MQTT topic
       ros_type: std_msgs.msg.String # ROS Message Type
-      converter: primitive_serializer # Converter used
 ```
 
-#### [WIP] MQTT topic-ROS service Bridge 
+#### MQTT topic-ROS service Bridge 
+```yaml
+mqtt2ros:
+  topic2topic:
+    number: # MQTT topic 
+      to: /number # ROS topic
+      ros_type: std_msgs.msg.Int32 # ROS Message type
+```
+
+#### MQTT topic-ROS service Bridge 
 ```yaml
 mqtt2ros:
   topic2service:
