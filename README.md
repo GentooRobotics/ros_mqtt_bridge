@@ -47,7 +47,7 @@ mqtt2ros:
     ```
 2. Build Docker image
     ```sh
-    docker build -t mqtt_bridge ./src/mqtt_bridge
+    docker pull perceptronproject/mqtt_bridge:arm64-v0.1.0
     ```
 3. Run Docker Container
     ```sh

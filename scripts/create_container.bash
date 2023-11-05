@@ -10,7 +10,7 @@ if [ "$1" == "robot" ]; then
     -e FASTRTPS_DEFAULT_PROFILES_FILE=/turtlebot4_discovery/fastdds_discovery_super_client.xml \
     -e ROS_DISCOVERY_SERVER=10.121.48.149:11811 \
     -e ROS_DOMAIN_ID=0 \
-    mqtt_bridge \
+    perceptronproject/mqtt_bridge:arm64-v0.1.0 \
     bash
 else
     docker run -it --rm \
@@ -18,6 +18,6 @@ else
     --volume="./:/colcon_ws" \
     --volume="/dev/shm:/dev/shm" \
     -w="/colcon_ws" \
-    mqtt_bridge \
+    perceptronproject/mqtt_bridge:arm64-v0.1.0 \
     bash
 fi
