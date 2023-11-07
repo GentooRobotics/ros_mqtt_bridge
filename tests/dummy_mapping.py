@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from std_srvs.srv import SetBool, Trigger
-from robot_slam_msgs.srv import BTSaveMap
+from std_srvs.srv import Trigger
+from robot_slam_msgs.srv import BTSaveMap, BTLoadMap
 import time
 
 
@@ -16,6 +16,9 @@ class DummyStartMappingNode(Node):
         )
         self.save_srv = self.create_service(
             BTSaveMap, "/bt/save_map", self.handle_save_map
+        )
+        self.load_srv = self.create_service(
+            BTLoadMap, "/bt/load_map", self.handle_load_map
         )
 
     def handle_start_mapping(self, request, response):
@@ -40,6 +43,14 @@ class DummyStartMappingNode(Node):
         response.message = "Map Saved"
         time.sleep(1)
         print("Save Map Service Responded")
+        return response
+    
+    def handle_load_map(self, request, response):
+        print("Load Map Service Received")
+        response.success = True
+        response.message = "Map Loaded"
+        time.sleep(1)
+        print("Load Map Service Responded")
         return response
 
 

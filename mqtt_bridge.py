@@ -7,15 +7,14 @@ from rclpy.logging import set_logger_level, LoggingSeverity
 from rclpy.client import Client as rclClient, SrvType, SrvTypeRequest, SrvTypeResponse
 from rclpy.publisher import MsgType, Publisher as rclPublisher
 # others
-import base64
 import hydra
 import json
-import cv2
 import paho.mqtt.client as mqtt
 from omegaconf import DictConfig
 import ros_serializers
 from ros_serializers.message_converter import convert_dictionary_to_ros_message, convert_ros_message_to_dictionary
 from functools import partial
+import time
 
 class MQTTBridge(Node):
     def __init__(self, cfg: DictConfig):
@@ -107,15 +106,22 @@ class MQTTBridge(Node):
 
     def get_mqtt_client(self):
         client = mqtt.Client()
-        client.on_connect = self.on_mqtt_connect
-        client.on_message = self.on_mqtt_message
         # client.username_pw_set(settings.MQTT_USER, settings.MQTT_PASSWORD)
-        client.connect(
-            host=self.cfg["mqtt_broker"]["host"],
-            port=self.cfg["mqtt_broker"]["port"],
-            keepalive=self.cfg["mqtt_broker"]["keepalive"],
-        )
-        return client
+
+        while True: 
+            try:
+                client.connect(
+                        host=self.cfg["mqtt_broker"]["host"],
+                        port=self.cfg["mqtt_broker"]["port"],
+                        keepalive=self.cfg["mqtt_broker"]["keepalive"],
+                    )
+                client.on_connect = self.on_mqtt_connect
+                client.on_message = self.on_mqtt_message
+                self.get_logger().info("Connected to MQTT Broker")
+                return client
+            except:
+                self.get_logger().warn("Unable to connect to MQTT Broker, retrying in 1s")
+                time.sleep(1)
     
     def on_mqtt_connect(self, mqtt_client: mqtt.Client, userdata: Any, flags: dict, rc: int):
         self.get_logger().info("Connected successfully to MQTT Broker")
