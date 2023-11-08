@@ -24,6 +24,9 @@ from ros_bridge import ROSBridge
 
 @hydra.main(version_base=None, config_path="./configs", config_name="bridge")
 def main(cfg: DictConfig) -> None:
+    # stupid, why need this????
+    time.sleep(30)
+
     rclpy.init()
     
     ros2mqtt_tasks = Queue(maxsize=cfg["ros2mqtt"]["queue_size"])

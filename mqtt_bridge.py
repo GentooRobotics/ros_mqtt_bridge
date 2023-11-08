@@ -91,7 +91,6 @@ class MQTTBridge:
         self.mqtt_client.loop_start()
         self.mqtt_client.on_connect = self.on_mqtt_connect
         self.mqtt_client.on_message = self.on_mqtt_message
-        self.mqtt_client.loop_start()
 
         while True:
             time.sleep(self.sleep_time)
