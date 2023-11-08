@@ -6,6 +6,8 @@ mqtt_broker:
   keepalive: 60
 
 ros2mqtt:
+  loop_rate: 2
+  queue_size: 10
   topic2topic:
     /chatter:
       to: chatter
@@ -16,6 +18,8 @@ ros2mqtt:
       converter: image_serializer
 
 mqtt2ros:
+  loop_rate: 2
+  queue_size: 10
   topic2topic:
     number:
       to: /number
