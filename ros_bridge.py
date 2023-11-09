@@ -1,9 +1,8 @@
 # ros
-from typing import Any
+from typing import Tuple
 import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.logging import set_logger_level, LoggingSeverity
 from rclpy.client import Client as rclClient, SrvType, SrvTypeRequest, SrvTypeResponse
 from rclpy.publisher import MsgType, Publisher as rclPublisher
 
@@ -12,15 +11,17 @@ import hydra
 import json
 import paho.mqtt.client as mqtt
 from omegaconf import DictConfig
-import ros_serializers
-from ros_serializers.message_converter import convert_dictionary_to_ros_message, convert_ros_message_to_dictionary
+from ros_serializers.message_converter import convert_dictionary_to_ros_message
 from functools import partial
-import time
 from queue import Queue
 
 class ROSBridge(Node):
 
-    def __init__(self, cfg: DictConfig, ros2mqtt_tasks, mqtt2ros_tasks):
+    def __init__(self, 
+                 cfg: DictConfig, 
+                 ros2mqtt_tasks: Queue[Tuple[str, str, MsgType, str]], 
+                 mqtt2ros_tasks: Queue[Tuple[str, str, str]]
+                ):
         super().__init__("ros_mqtt_bridge")
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks 
@@ -99,7 +100,7 @@ class ROSBridge(Node):
     
     async def timer_callback(self):
         # print('[ROS Bridge] Timer callback triggered.')
-        print(f'[ROS Bridge] MQTT2ROS Tasks: {self.mqtt2ros_tasks.qsize()}')
+        # print(f'[ROS Bridge] MQTT2ROS Tasks: {self.mqtt2ros_tasks.qsize()}')
 
         if not self.mqtt2ros_tasks.empty():
             cmd, mqtt_topic, payload = self.mqtt2ros_tasks.get()
@@ -109,7 +110,7 @@ class ROSBridge(Node):
                 self.ros_publishers[mqtt_topic].publish(convert_dictionary_to_ros_message(hydra.utils.get_class(ros_msg_typename), json.loads(payload)))
             
             elif (cmd == "topic2service"):
-                print('[ROS Bridge] Topic 2 Service Triggered..')
+                # print('[ROS Bridge] Topic 2 Service Triggered..')
                 topic2service = self.cfg["mqtt2ros"]["topic2service"][mqtt_topic]
                 ros_service: str = topic2service["to"]
                 ros_srv_typename: str = topic2service["ros_type"]
@@ -120,7 +121,7 @@ class ROSBridge(Node):
                     self.get_logger().error(e)
                     return
                 print(f"[ROS Bridge] Called [ROS][service]: {ros_service}")
-                response = await self.ros_service_clients[mqtt_topic].call_async(req)
+                response: SrvTypeResponse = await self.ros_service_clients[mqtt_topic].call_async(req)
                 print(f"Received Response [ROS][service]: {ros_service}")
                 self.ros2mqtt_tasks.put(("topic2service", mqtt_topic, response, "primitive"))
             print('[ROS Bridge] Dequeued..')

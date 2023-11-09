@@ -18,6 +18,6 @@ else
     --volume="./:/colcon_ws" \
     --volume="/dev/shm:/dev/shm" \
     -w="/colcon_ws" \
-    perceptronproject/mqtt_bridge:arm64-v0.1.0 \
+    mqtt_bridge \
     bash
 fi
