@@ -94,6 +94,7 @@ class ROSBridge(Node):
             self.ros_service_clients[mqtt_topic] = self.create_client(
                 ros_type, ros_service, callback_group=self.cb_group
             )
+            self.ros_service_clients[mqtt_topic].wait_for_service()
             print(f"[ROS Bridge] bridge <-  [MQTT][topic]  {mqtt_topic}")
             print(f"[ROS Bridge]        <-> [ROS][service] {ros_service}")
             print(f"[ROS Bridge]        ->  [MQTT][topic]  {mqtt_response_topic}")
