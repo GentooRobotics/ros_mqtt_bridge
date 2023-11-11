@@ -13,9 +13,9 @@ from ros_bridge import ROSBridge
 @hydra.main(version_base=None, config_path="./configs", config_name="bridge")
 def main(cfg: DictConfig) -> None:
 
-    signal.signal(signal.SIGTERM, service_shutdown)
-    signal.signal(signal.SIGINT, service_shutdown)
- 
+    signal.signal(signal.SIGTERM, lambda signum, frame: print(f"Received signal {signum}. Gracefully terminating threads."))
+    signal.signal(signal.SIGINT, lambda signum, frame: print(f"Received signal {signum}. Gracefully terminating threads."))
+
     rclpy.init()
     
     ros2mqtt_tasks: Queue[Tuple[str, str, MsgType, str]] = Queue(maxsize=cfg["ros2mqtt"]["queue_size"])
