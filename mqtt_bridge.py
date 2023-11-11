@@ -7,6 +7,7 @@ import ros_serializers
 from ros_serializers.message_converter import convert_ros_message_to_dictionary
 from queue import Queue
 from rclpy.publisher import MsgType
+import threading
 
 class MQTTBridge:
 
@@ -18,6 +19,7 @@ class MQTTBridge:
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks 
         self.mqtt2ros_tasks = mqtt2ros_tasks
+        self.shutdown_flag = threading.Event()
 
         # mqtt client
         self.sleep_time = 1. / self.cfg["ros2mqtt"]["loop_rate"]
@@ -90,7 +92,7 @@ class MQTTBridge:
     def run(self):
         self.mqtt_client.loop_start()
 
-        while True:
+        while not self.shutdown_flag.is_set():
             time.sleep(self.sleep_time)
 
             if (not self.connected):

@@ -1,5 +1,6 @@
 import rclpy
 import hydra
+import signal 
 from omegaconf import DictConfig
 from queue import Queue
 from threading import Thread
@@ -11,9 +12,10 @@ from ros_bridge import ROSBridge
 
 @hydra.main(version_base=None, config_path="./configs", config_name="bridge")
 def main(cfg: DictConfig) -> None:
-    # stupid, why need this????
-    # time.sleep(30)
 
+    signal.signal(signal.SIGTERM, service_shutdown)
+    signal.signal(signal.SIGINT, service_shutdown)
+ 
     rclpy.init()
     
     ros2mqtt_tasks: Queue[Tuple[str, str, MsgType, str]] = Queue(maxsize=cfg["ros2mqtt"]["queue_size"])
@@ -29,9 +31,12 @@ def main(cfg: DictConfig) -> None:
 
     ros_bridge_thread.start()
     mqtt_bridge_thread.start()
-    ros_bridge_thread.join()
-    mqtt_bridge_thread.join()
 
+    mqtt_bridge.shutdown_flag.set()
+
+    # Wait for the threads to close...
+    ros_bridge_thread.join()
+    mqtt_bridge_thread.join() 
 
 if __name__ == "__main__":
     main()
