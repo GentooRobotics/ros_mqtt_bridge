@@ -16,7 +16,11 @@ ros2mqtt:
       to: map_with_laser
       ros_type: sensor_msgs.msg.Image
       converter: image_serializer
-
+    /map_viz_local:
+      to: map_viz_local
+      ros_type: sensor_msgs.msg.Image
+      converter: image_serializer
+      
 mqtt2ros:
   loop_rate: 2
   queue_size: 10

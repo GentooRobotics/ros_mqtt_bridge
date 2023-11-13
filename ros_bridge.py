@@ -58,7 +58,7 @@ class ROSBridge(Node):
             
     
     def ros_callback(self, msg, converter, ros_topic):
-        print(f"[MQTT Bridge] Received [ROS][topic]: {ros_topic}")
+        # print(f"[MQTT Bridge] Received [ROS][topic]: {ros_topic}")
         self.ros2mqtt_tasks.put(("topic2topic", ros_topic, msg, converter))
     
     def create_ros_publishers(self):

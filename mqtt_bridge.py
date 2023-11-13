@@ -19,7 +19,7 @@ class MQTTBridge:
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks 
         self.mqtt2ros_tasks = mqtt2ros_tasks
-        self.shutdown_flag = threading.Event()
+        self.shutdown = False
 
         # mqtt client
         self.sleep_time = 1. / self.cfg["ros2mqtt"]["loop_rate"]
@@ -91,8 +91,8 @@ class MQTTBridge:
     
     def run(self):
         self.mqtt_client.loop_start()
-
-        while not self.shutdown_flag.is_set():
+        
+        while not self.shutdown:
             time.sleep(self.sleep_time)
 
             if (not self.connected):
