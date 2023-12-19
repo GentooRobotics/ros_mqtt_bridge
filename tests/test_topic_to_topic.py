@@ -1,3 +1,4 @@
+# Deprecated: This file is deprecated
 import rclpy
 from rclpy.qos import QoSProfile
 from rclpy.node import Node
@@ -54,7 +55,7 @@ def test_primitive_converter():
 
     topic = "/chatter"
     topic2topic = cfg["ros2mqtt"]["topic2topic"][topic]
-    mqtt_topic = topic2topic["to"]
+    mqtt_topic = topic2topic["mqtt_topic_name"]
     ros_type = topic2topic["ros_type"]
     converter = topic2topic["converter"]
     assert converter == "primitive_serializer"
@@ -88,7 +89,7 @@ def test_image_converter():
 
     topic = "/test_map_with_laser"
     topic2topic = cfg["ros2mqtt"]["topic2topic"][topic]
-    mqtt_topic = topic2topic["to"]
+    mqtt_topic = topic2topic["mqtt_topic_name"]
     ros_type = topic2topic["ros_type"]
     converter = topic2topic["converter"]
     assert converter == "image_serializer"

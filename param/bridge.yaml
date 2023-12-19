@@ -6,35 +6,38 @@ mqtt_broker:
   keepalive: 60
 
 ros2mqtt:
-  loop_rate: 2
+  loop_rate: 20
   queue_size: 10
   topic2topic:
     /chatter:
-      to: chatter
+      mqtt_topic_name: chatter
       ros_type: std_msgs.msg.String
+      rate: 1
+
     /map_with_laser:
-      to: map_with_laser
+      mqtt_topic_name: map_with_laser
       ros_type: sensor_msgs.msg.Image
       converter: image_serializer
 
 mqtt2ros:
-  loop_rate: 2
+  loop_rate: 20
   queue_size: 10
   topic2topic:
     number:
-      to: /number
+      ros_topic_name: /number
       ros_type: std_msgs.msg.Int32
+      rate: 10
       
   topic2service:
     backend/start_mapping:
-      to: /bt/start_mapping
+      ros_service_name: /bt/start_mapping
       ros_type: std_srvs.srv.Trigger
-      response: bt/start_mapping_response
+      mqtt_response_topic_name: bt/start_mapping_response
     backend/stop_mapping:
-      to: /bt/stop_mapping
+      ros_service_name: /bt/stop_mapping
       ros_type: std_srvs.srv.Trigger
-      response: bt/stop_mapping_response  
+      mqtt_response_topic_name: bt/stop_mapping_response  
     backend/save_map:
-      to: /bt/save_map
+      ros_service_name: /bt/save_map
       ros_type: robot_slam_msgs.srv.BTSaveMap
-      response: bt/save_map_response  
+      mqtt_response_topic_name: bt/save_map_response  

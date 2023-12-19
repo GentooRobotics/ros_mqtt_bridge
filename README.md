@@ -1,4 +1,4 @@
-## MQTT Bridge
+## ROS MQTT Bridge
 
 This is a ROS package that allows two ways bridging between ROS & MQTT protocols. MQTT Bridge supports 4 types of bridging.
 - `ROS topic -> MQTT topic`

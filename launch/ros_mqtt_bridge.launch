@@ -1,0 +1,5 @@
+<launch>
+    <node name="ros_mqtt_bridge" pkg="ros_mqtt_bridge" type="ros_mqtt_bridge" output="screen">
+        <param name="config_path" value="$(find ros_mqtt_bridge)/param/bridge.yaml"/>
+    </node>
+</launch>
