@@ -3,7 +3,6 @@ import threading
 import time
 
 
-
 class KillableTimer(threading.Timer):
     def __init__(self, *args, daemon=False, **kwargs):
         threading.Timer.__init__(self, *args, **kwargs)

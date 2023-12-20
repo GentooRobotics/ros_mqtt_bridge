@@ -33,19 +33,22 @@ import time
 import rospy
 from std_srvs.srv import SetBool, SetBoolRequest, SetBoolResponse
 
+
 def handle_set_bool(req):
-    print("Returning [%s]"%(req.data))
-    response =  SetBoolResponse()
+    print("Returning [%s]" % (req.data))
+    response = SetBoolResponse()
     time.sleep(10)
     response.success = True
     response.message = "Set bool successfully"
     return response
 
+
 def set_bool_server():
-    rospy.init_node('set_bool_server')
-    s = rospy.Service('set_bool', SetBool, handle_set_bool)
+    rospy.init_node("set_bool_server")
+    s = rospy.Service("set_bool", SetBool, handle_set_bool)
     print("Ready to set bool.")
     rospy.spin()
+
 
 if __name__ == "__main__":
     set_bool_server()

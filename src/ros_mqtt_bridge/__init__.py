@@ -2,15 +2,14 @@
 import rospy
 from omegaconf import DictConfig
 from .task_type import MQTT2ROSItem, ROS2MQTTItem
-from .mqtt_bridge import MQTTBridge 
+from .mqtt_bridge import MQTTBridge
 from .ros_bridge import ROSBridge
 import yaml
+
 MsgType = type[rospy.Message]
 
 
-
 def main() -> None:
-
     rospy.init_node("ros_mqtt_bridge")
     config_path = rospy.get_param("~config_path", "bridge.yaml")
     with open(config_path, "r") as f:
