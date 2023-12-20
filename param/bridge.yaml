@@ -1,0 +1,33 @@
+logging_severity: INFO
+
+mqtt_broker:
+  host: localhost
+  port: 1883
+  keepalive: 60
+
+ros2mqtt:
+  loop_rate: 20
+  topic2topic:
+    /chatter:
+      mqtt_topic_name: chatter
+      ros_type: std_msgs.msg.String
+      rate: 1
+
+    /map_with_laser:
+      mqtt_topic_name: map_with_laser
+      ros_type: sensor_msgs.msg.Image
+      converter: image_serializer
+
+mqtt2ros:
+  loop_rate: 20
+  topic2topic:
+    number:
+      ros_topic_name: /number
+      ros_type: std_msgs.msg.Int32
+      rate: 10
+      
+  topic2service:
+    set_bool_request:
+      ros_service_name: set_bool
+      ros_type: std_srvs.srv.SetBool
+      mqtt_response_topic_name: set_bool_response

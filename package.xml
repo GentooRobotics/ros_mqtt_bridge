@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros_mqtt_bridge</name>
+  <version>0.1.0</version>
+  <description>The ros_pytest package</description>
+
+  <author>Nelsen Edbert Winata</author>
+  <maintainer email="nelsenedbert@gmail.com">Nelsen Edbert Winata</maintainer>
+
+  <license>TODO</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>python3-setuptools</buildtool_depend>
+  <depend>rospy</depend>
+  <depend>python3-pytest</depend>
+  <depend>python3-pytest-cov</depend>
+  <test_depend>rostest</test_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
