@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from omegaconf import DictConfig
-from queue import Queue
-from typing import Tuple
-
-from .task_type import ros2mqtt_task, mqtt2ros_task
+from .task_type import MQTT2ROSItem, ROS2MQTTItem
 from .mqtt_bridge import MQTTBridge 
 from .ros_bridge import ROSBridge
 import yaml
@@ -19,12 +16,9 @@ def main() -> None:
     with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
     cfg = DictConfig(cfg)
-    default_queue_size = 10
-    ros2mqtt_queue_size = cfg["ros2mqtt"]["queue_size"] if "ros2mqtt" in cfg and "queue_size" in cfg["ros2mqtt"] else default_queue_size
-    mqtt2ros_queue_size = cfg["mqtt2ros"]["queue_size"] if "mqtt2ros" in cfg and "queue_size" in cfg["mqtt2ros"] else default_queue_size
 
-    ros2mqtt_tasks: Queue[ros2mqtt_task] = Queue(maxsize=ros2mqtt_queue_size)
-    mqtt2ros_tasks: Queue[mqtt2ros_task] = Queue(maxsize=mqtt2ros_queue_size)
+    ros2mqtt_tasks: dict[str, ROS2MQTTItem] = {}
+    mqtt2ros_tasks: dict[str, MQTT2ROSItem] = {}
 
     # ROS Bridge
     ros_bridge = ROSBridge(cfg, ros2mqtt_tasks, mqtt2ros_tasks)
