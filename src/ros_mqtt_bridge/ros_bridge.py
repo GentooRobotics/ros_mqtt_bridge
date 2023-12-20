@@ -9,7 +9,6 @@ import json
 from omegaconf import DictConfig
 from .ros_serializers.message_converter import convert_dictionary_to_ros_message
 from functools import partial
-from queue import Queue
 from .task_type import MQTT2ROSItem, ROS2MQTTItem
 MsgType = type[rospy.Message]
 from .field_checker import check_for_ros_2_mqtt_keys, check_for_service_keys, check_for_mqtt_2_ros_keys
