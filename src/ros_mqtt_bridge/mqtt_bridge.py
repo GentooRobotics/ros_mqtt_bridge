@@ -14,7 +14,7 @@ from .field_checker import (
 
 import rospy
 
-MsgType = type[rospy.Message]
+# MsgType = type[rospy.Message]
 import threading
 
 
@@ -22,8 +22,8 @@ class MQTTBridge:
     def __init__(
         self,
         cfg: DictConfig,
-        ros2mqtt_tasks: dict[str, ROS2MQTTItem],
-        mqtt2ros_tasks: dict[str, MQTT2ROSItem],
+        ros2mqtt_tasks,
+        mqtt2ros_tasks,
     ):
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks
