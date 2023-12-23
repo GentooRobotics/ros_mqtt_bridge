@@ -6,7 +6,7 @@ from .mqtt_bridge import MQTTBridge
 from .ros_bridge import ROSBridge
 import yaml
 
-MsgType = type[rospy.Message]
+# MsgType = type[rospy.Message]
 
 
 def main() -> None:
@@ -16,8 +16,8 @@ def main() -> None:
         cfg = yaml.safe_load(f)
     cfg = DictConfig(cfg)
 
-    ros2mqtt_tasks: dict[str, ROS2MQTTItem] = {}
-    mqtt2ros_tasks: dict[str, MQTT2ROSItem] = {}
+    ros2mqtt_tasks = {}
+    mqtt2ros_tasks = {}
 
     # ROS Bridge
     ros_bridge = ROSBridge(cfg, ros2mqtt_tasks, mqtt2ros_tasks)

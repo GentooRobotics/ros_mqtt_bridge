@@ -11,7 +11,7 @@ from .ros_serializers.message_converter import convert_dictionary_to_ros_message
 from functools import partial
 from .task_type import MQTT2ROSItem, ROS2MQTTItem
 
-MsgType = type[rospy.Message]
+# MsgType = type[rospy.Message]
 from .field_checker import (
     check_for_ros_2_mqtt_keys,
     check_for_service_keys,
@@ -24,14 +24,14 @@ class ROSBridge:
     def __init__(
         self,
         cfg: DictConfig,
-        ros2mqtt_tasks: dict[str, ROS2MQTTItem],
-        mqtt2ros_tasks: dict[str, MQTT2ROSItem],
+        ros2mqtt_tasks,
+        mqtt2ros_tasks,
     ):
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks
         self.mqtt2ros_tasks = mqtt2ros_tasks
-        self.ros_publishers: dict[str, rospy.Publisher] = {}
-        self.ros_service_clients: dict[str, rospy.ServiceProxy] = {}
+        self.ros_publishers = {}
+        self.ros_service_clients = {}
 
         self.create_ros_subscribers()
         self.create_ros_service_clients()

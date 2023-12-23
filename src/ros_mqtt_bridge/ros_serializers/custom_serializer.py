@@ -2,7 +2,7 @@ import cv2
 import base64
 
 from cv_bridge import CvBridge
-from message_converter import convert_ros_message_to_dictionary
+from .message_converter import convert_ros_message_to_dictionary
 from sensor_msgs.msg import Image
 
 bridge = CvBridge()
