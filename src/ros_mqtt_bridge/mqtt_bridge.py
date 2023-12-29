@@ -38,14 +38,14 @@ class MQTTBridge:
         self.sleep_time = 1.0 / (self.loop_rate)  # default loop rate
 
         self.topic2topic_available = "ros2mqtt" in self.cfg and (
-                "topic2topic" in self.cfg["ros2mqtt"]
-                and self.cfg["ros2mqtt"]["topic2topic"]
-            )
-        
+            "topic2topic" in self.cfg["ros2mqtt"]
+            and self.cfg["ros2mqtt"]["topic2topic"]
+        )
+
         self.topic2service_available = "ros2mqtt" in self.cfg and (
-                "topic2service" in self.cfg["ros2mqtt"]
-                and self.cfg["ros2mqtt"]["topic2service"]
-            )
+            "topic2service" in self.cfg["ros2mqtt"]
+            and self.cfg["ros2mqtt"]["topic2service"]
+        )
         if self.topic2topic_available:
             for ros_topic in self.cfg["ros2mqtt"]["topic2topic"]:
                 ros2mqtt: Dict[str, str] = self.cfg["ros2mqtt"]["topic2topic"][
@@ -198,7 +198,9 @@ class MQTTBridge:
             ):  # no new message
                 continue
 
-            if (ros2mqtt_item.commmunication_type == CommunicationType.TOPIC2TOPIC) and (
+            if (
+                ros2mqtt_item.commmunication_type == CommunicationType.TOPIC2TOPIC
+            ) and (
                 time.time() - ros2mqtt_item.last_published_time
                 < 1.0 / self.publisher_rate[mqtt_topic]
             ):

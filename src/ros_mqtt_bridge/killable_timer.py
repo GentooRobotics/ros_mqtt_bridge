@@ -2,8 +2,9 @@ import sys
 import threading
 import time
 
+
 class KillableTimer(threading.Timer):
-    def __init__(self, *args, interval = 0.0, daemon=False, timeout = None, **kwargs):
+    def __init__(self, *args, interval=0.0, daemon=False, timeout=None, **kwargs):
         kwargs["interval"] = interval
         threading.Timer.__init__(self, *args, **kwargs)
         self.daemon = daemon
