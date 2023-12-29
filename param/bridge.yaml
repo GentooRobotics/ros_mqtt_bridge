@@ -31,3 +31,4 @@ mqtt2ros:
       ros_service_name: set_bool
       ros_type: std_srvs.srv.SetBool
       mqtt_response_topic_name: set_bool_response
+      timeout: 5

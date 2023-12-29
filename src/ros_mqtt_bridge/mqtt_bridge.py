@@ -102,7 +102,7 @@ class MQTTBridge:
                 rospy.loginfo("[MQTT Bridge] Connected to MQTT Broker")
                 return client
             except KeyError:
-                rospy.logerr("Missing key in config file")
+                rospy.logerr("[MQTT Bridge] Missing key in config file")
                 raise
             except Exception:
                 rospy.logwarn(
