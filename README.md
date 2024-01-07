@@ -1,5 +1,5 @@
 ## ROS MQTT Bridge
-[![Version badge](https://img.shields.io/badge/Version-0.1.0-green.svg)](https://shields.io/)
+[![Version badge](https://img.shields.io/badge/Version-0.2.0-green.svg)](https://shields.io/)
 
 
 This is a ROS package that allows two ways bridging between ROS & MQTT protocols. MQTT Bridge supports 4 types of bridging.
