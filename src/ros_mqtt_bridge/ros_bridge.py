@@ -1,6 +1,6 @@
 # ros
 import time
-from typing import Any, Tuple
+from typing import Any, Dict, Optional
 import rospy
 
 # others
@@ -9,9 +9,9 @@ import json
 from omegaconf import DictConfig
 from .ros_serializers.message_converter import convert_dictionary_to_ros_message
 from functools import partial
-from .task_type import MQTT2ROSItem, ROS2MQTTItem
+from .task_type import MQTT2ROSItem, ROS2MQTTItem, CommunicationType
 
-# MsgType = type[rospy.Message]
+MsgType = rospy.Message
 from .field_checker import (
     check_for_ros_2_mqtt_keys,
     check_for_service_keys,
@@ -24,14 +24,15 @@ class ROSBridge:
     def __init__(
         self,
         cfg: DictConfig,
-        ros2mqtt_tasks,
-        mqtt2ros_tasks,
+        ros2mqtt_tasks: Dict[str, ROS2MQTTItem],
+        mqtt2ros_tasks: Dict[str, MQTT2ROSItem],
     ):
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks
         self.mqtt2ros_tasks = mqtt2ros_tasks
-        self.ros_publishers = {}
-        self.ros_service_clients = {}
+        self.ros_publishers: Dict[str, rospy.Publisher] = {}
+        self.ros_service_clients: Dict[str, rospy.ServiceProxy] = {}
+        self.ros_client_threads: Dict[str, KillableTimer] = {}
 
         self.create_ros_subscribers()
         self.create_ros_service_clients()
@@ -66,7 +67,7 @@ class ROSBridge:
             return
         # ros2mqtt (topic2topic)
         for ros_topic in self.cfg["ros2mqtt"]["topic2topic"]:
-            ros2mqtt: dict[str, str] = self.cfg["ros2mqtt"]["topic2topic"][ros_topic]
+            ros2mqtt: Dict[str, str] = self.cfg["ros2mqtt"]["topic2topic"][ros_topic]
             check_for_ros_2_mqtt_keys("ROS", ros_topic, ros2mqtt)
             ros_type_name: str = ros2mqtt["ros_type"]
             mqtt_topic: str = ros2mqtt["mqtt_topic_name"]
@@ -90,14 +91,17 @@ class ROSBridge:
             rospy.loginfo(f"[ROS Bridge] bridge <-  [ROS][topic]   {ros_topic}")
             rospy.loginfo(f"[ROS Bridge]        ->  [MQTT][topic]  {mqtt_topic}")
 
-    def ros_callback(self, msg, converter, ros_topic):
-        rospy.loginfo(f"[MQTT Bridge] Received [ROS][topic]: {ros_topic}")
+    def ros_callback(self, msg: MsgType, converter, ros_topic):
+        rospy.logdebug(f"[ROS BRIDGE] Received [ROS][topic]: {ros_topic}")
         mqtt_topic: str = self.cfg["ros2mqtt"]["topic2topic"][ros_topic][
             "mqtt_topic_name"
         ]
         self.ros2mqtt_tasks[mqtt_topic].msg = msg
         self.ros2mqtt_tasks[mqtt_topic].converter = converter
         self.ros2mqtt_tasks[mqtt_topic].last_received_time = time.time()
+        self.ros2mqtt_tasks[
+            mqtt_topic
+        ].commmunication_type = CommunicationType.TOPIC2TOPIC
 
     def initialize_publish_rate(self, cfg: dict, publisher_key: str):
         if "rate" in cfg:
@@ -129,7 +133,7 @@ class ROSBridge:
             return
 
         for mqtt_topic in self.cfg["mqtt2ros"]["topic2topic"].keys():
-            topic2topic: dict[str, str] = self.cfg["mqtt2ros"]["topic2topic"][
+            topic2topic: Dict[str, str] = self.cfg["mqtt2ros"]["topic2topic"][
                 mqtt_topic
             ]
             check_for_mqtt_2_ros_keys("ROS", mqtt_topic, topic2topic)
@@ -160,7 +164,7 @@ class ROSBridge:
             return
         # mqtt2ros (topic2service)
         for mqtt_request_topic in self.cfg["mqtt2ros"]["topic2service"]:
-            topic2service: dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][
+            topic2service: Dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][
                 mqtt_request_topic
             ]
 
@@ -188,6 +192,23 @@ class ROSBridge:
             )
 
     def timer_callback(self, _):
+        # Remove finished threads when iterating through the dict
+        thread_to_remove = []
+        for thread_name, thread in self.ros_client_threads.items():
+            if not thread.is_alive():
+                thread.join()
+                rospy.logdebug(f"[ROS Bridge] Service call for {thread_name} finished")
+                thread_to_remove.append(thread_name)
+            elif thread.is_timed_out():
+                rospy.logwarn(
+                    f"[ROS Bridge] Service call for {thread_name} timed out, cancelling the call"
+                )
+                thread.kill()
+                thread.join()
+                thread_to_remove.append(thread_name)
+        for thread_name in thread_to_remove:
+            del self.ros_client_threads[thread_name]
+
         for mqtt_receive_topic_name, mqtt2ros_item in self.mqtt2ros_tasks.items():
             current_time = time.time()
             if (
@@ -214,25 +235,28 @@ class ROSBridge:
                 mqtt2ros_item.last_published_time = current_time
 
             elif mqtt2ros_item.command == "topic2service":
-                topic2service: dict[str, Any] = self.cfg["mqtt2ros"]["topic2service"][
+                topic2service: Dict[str, Any] = self.cfg["mqtt2ros"]["topic2service"][
                     mqtt_receive_topic_name
                 ]
-                ros_service: str = topic2service["ros_service_name"]
-                ros_srv_typename: str = topic2service["ros_type"]
-                timeout: float = topic2service.get("timeout", 1.0)
 
                 def service_call(
                     self: ROSBridge,
                     mqtt_receive_topic_name: str,
                     mqtt2ros_item: MQTT2ROSItem,
-                    ros_service: str,
+                    topic2service: Dict[str, Any],
                 ):
+                    ros_service: str = topic2service["ros_service_name"]
+                    ros_srv_typename: str = topic2service["ros_type"]
+                    timeout: Optional[float] = topic2service.get("timeout", None)
+                    mqtt_response_topic_name: str = topic2service[
+                        "mqtt_response_topic_name"
+                    ]
                     try:
                         self.ros_service_clients[
                             mqtt_receive_topic_name
                         ].wait_for_service(timeout=timeout)
                     except rospy.exceptions.ROSException:
-                        rospy.logerr(f"Service {ros_service} timed out")
+                        rospy.logerr(f"[ROS Bridge] Service {ros_service} timed out")
                         return
 
                     try:
@@ -241,22 +265,30 @@ class ROSBridge:
                             json.loads(mqtt2ros_item.payload),
                         )
                     except AttributeError as e:
+                        rospy.logerr(
+                            f"Erorr in converting ros message to json from {mqtt_receive_topic_name} to {ros_service} with {ros_srv_typename}"
+                        )
                         rospy.logerr(e)
                         return
 
                     rospy.logdebug(
                         f"[ROS Bridge] Calling [ROS][service]: {ros_service}"
                     )
-                    response = self.ros_service_clients[mqtt_receive_topic_name].call(
-                        request
-                    )
+
                     mqtt2ros_item.last_published_time = time.time()
+                    try:
+                        response = self.ros_service_clients[
+                            mqtt_receive_topic_name
+                        ].call(request)
+                    except rospy.ServiceException as e:
+                        rospy.logerr(
+                            f"[ROS Bridge] Service call failed: {ros_service}, server is killed"
+                        )
+                        return
 
-                    mqtt_response_topic_name: str = topic2service[
-                        "mqtt_response_topic_name"
-                    ]
-
-                    rospy.logdebug(f"Received Response [ROS][service]: {ros_service}")
+                    rospy.logdebug(
+                        f"[ROS Bridge] Successfully received Response [ROS][service]: {ros_service} with response:\n{response}"
+                    )
                     self.ros2mqtt_tasks[mqtt_response_topic_name].msg = response
                     self.ros2mqtt_tasks[
                         mqtt_response_topic_name
@@ -264,9 +296,20 @@ class ROSBridge:
                     self.ros2mqtt_tasks[
                         mqtt_response_topic_name
                     ].last_received_time = time.time()
+                    self.ros2mqtt_tasks[
+                        mqtt_response_topic_name
+                    ].commmunication_type = CommunicationType.TOPIC2SERVICE
 
-                KillableTimer(
-                    0.0,
-                    service_call,
-                    args=(self, mqtt_receive_topic_name, mqtt2ros_item, ros_service),
-                ).start()
+                if mqtt_receive_topic_name in self.ros_client_threads:
+                    if self.ros_client_threads[mqtt_receive_topic_name].is_alive():
+                        rospy.logwarn(
+                            f"[ROS Bridge] Previous service call for {mqtt_receive_topic_name} is still running, skipping this call"
+                        )
+                        mqtt2ros_item.last_published_time = current_time
+                        continue
+                self.ros_client_threads[mqtt_receive_topic_name] = KillableTimer(
+                    function=service_call,
+                    timeout=topic2service.get("timeout", None),
+                    args=(self, mqtt_receive_topic_name, mqtt2ros_item, topic2service),
+                )
+                self.ros_client_threads[mqtt_receive_topic_name].start()

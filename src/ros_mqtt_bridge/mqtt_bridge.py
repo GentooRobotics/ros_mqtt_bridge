@@ -5,16 +5,15 @@ import paho.mqtt.client as mqtt
 from omegaconf import DictConfig
 from . import ros_serializers
 from .ros_serializers.message_converter import convert_ros_message_to_dictionary
-from .task_type import MQTT2ROSItem, ROS2MQTTItem
+from .task_type import MQTT2ROSItem, ROS2MQTTItem, CommunicationType
 from .field_checker import (
     check_for_ros_2_mqtt_keys,
     check_for_service_keys,
     check_for_mqtt_2_ros_keys,
 )
+from typing import Dict
 
 import rospy
-
-# MsgType = type[rospy.Message]
 import threading
 
 
@@ -22,8 +21,8 @@ class MQTTBridge:
     def __init__(
         self,
         cfg: DictConfig,
-        ros2mqtt_tasks,
-        mqtt2ros_tasks,
+        ros2mqtt_tasks: Dict[str, ROS2MQTTItem],
+        mqtt2ros_tasks: Dict[str, MQTT2ROSItem],
     ):
         self.cfg = cfg
         self.ros2mqtt_tasks = ros2mqtt_tasks
@@ -38,27 +37,27 @@ class MQTTBridge:
             self.loop_rate = self.cfg["ros2mqtt"]["loop_rate"]
         self.sleep_time = 1.0 / (self.loop_rate)  # default loop rate
 
-        self.mqtt_publisher_available = "ros2mqtt" in self.cfg and (
-            (
-                "topic2topic" in self.cfg["ros2mqtt"]
-                and self.cfg["ros2mqtt"]["topic2topic"]
-            )
-            or (
-                "topic2service" in self.cfg["ros2mqtt"]
-                and self.cfg["ros2mqtt"]["topic2service"]
-            )
+        self.topic2topic_available = "ros2mqtt" in self.cfg and (
+            "topic2topic" in self.cfg["ros2mqtt"]
+            and self.cfg["ros2mqtt"]["topic2topic"]
         )
-        if self.mqtt_publisher_available:
+
+        self.topic2service_available = "ros2mqtt" in self.cfg and (
+            "topic2service" in self.cfg["ros2mqtt"]
+            and self.cfg["ros2mqtt"]["topic2service"]
+        )
+        if self.topic2topic_available:
             for ros_topic in self.cfg["ros2mqtt"]["topic2topic"]:
-                ros2mqtt: dict[str, str] = self.cfg["ros2mqtt"]["topic2topic"][
+                ros2mqtt: Dict[str, str] = self.cfg["ros2mqtt"]["topic2topic"][
                     ros_topic
                 ]
                 check_for_ros_2_mqtt_keys("MQTT", ros_topic, ros2mqtt)
                 mqtt_topic_name: str = ros2mqtt["mqtt_topic_name"]
                 self.initialize_publish_rate(ros2mqtt, mqtt_topic_name)
 
+        if self.topic2service_available:
             for mqtt_topic in self.cfg["mqtt2ros"]["topic2service"]:
-                mqtt2ros: dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][
+                mqtt2ros: Dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][
                     mqtt_topic
                 ]
                 check_for_service_keys("MQTT", mqtt_topic, mqtt2ros)
@@ -103,7 +102,7 @@ class MQTTBridge:
                 rospy.loginfo("[MQTT Bridge] Connected to MQTT Broker")
                 return client
             except KeyError:
-                rospy.logerr("Missing key in config file")
+                rospy.logerr("[MQTT Bridge] Missing key in config file")
                 raise
             except Exception:
                 rospy.logwarn(
@@ -136,7 +135,7 @@ class MQTTBridge:
             self.mqtt2ros_tasks[msg.topic].payload = msg.payload
             self.mqtt2ros_tasks[msg.topic].command = "topic2service"
             self.mqtt2ros_tasks[msg.topic].last_received_time = time.time()
-            rospy.loginfo(f"[MQTT Bridge] MQTT2ROS Topic 2 Service {msg.topic}")
+            rospy.logdebug(f"[MQTT Bridge] MQTT2ROS Topic 2 Service {msg.topic}")
 
     def subscribe_to_mqtt_topics(self):
         if "mqtt2ros" not in self.cfg:
@@ -148,7 +147,7 @@ class MQTTBridge:
             and self.cfg["mqtt2ros"]["topic2topic"]
         ):
             for mqtt_topic in self.cfg["mqtt2ros"]["topic2topic"]:
-                topic2topic: dict[str, str] = self.cfg["mqtt2ros"]["topic2topic"][
+                topic2topic: Dict[str, str] = self.cfg["mqtt2ros"]["topic2topic"][
                     mqtt_topic
                 ]
                 check_for_mqtt_2_ros_keys("MQTT", mqtt_topic, topic2topic)
@@ -165,7 +164,7 @@ class MQTTBridge:
             and self.cfg["mqtt2ros"]["topic2service"]
         ):
             for mqtt_topic in self.cfg["mqtt2ros"]["topic2service"]:
-                topic2service: dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][
+                topic2service: Dict[str, str] = self.cfg["mqtt2ros"]["topic2service"][
                     mqtt_topic
                 ]
                 check_for_service_keys("MQTT", mqtt_topic, topic2service)
@@ -181,7 +180,7 @@ class MQTTBridge:
                 )
 
     def run_once(self):
-        if not self.mqtt_publisher_available:
+        if not self.topic2topic_available and not self.topic2service_available:
             rospy.logwarn_once(f"[MQTT Bridge]: MQTT Publisher not available..")
             return
 
@@ -200,6 +199,8 @@ class MQTTBridge:
                 continue
 
             if (
+                ros2mqtt_item.commmunication_type == CommunicationType.TOPIC2TOPIC
+            ) and (
                 time.time() - ros2mqtt_item.last_published_time
                 < 1.0 / self.publisher_rate[mqtt_topic]
             ):
