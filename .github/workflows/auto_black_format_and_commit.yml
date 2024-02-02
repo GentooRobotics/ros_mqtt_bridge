@@ -5,4 +5,4 @@ on: [push, workflow_dispatch]
 
 jobs:
     black_format_and_commit:
-        uses: perceptron-inc/shared_workflows/.github/workflows/black_format_and_commit.yml@black-format
+        uses: GentooRobotics/shared_workflows/.github/workflows/black_format_and_commit.yml@main
