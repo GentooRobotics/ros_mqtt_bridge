@@ -99,9 +99,9 @@ class ROSBridge:
         self.ros2mqtt_tasks[mqtt_topic].msg = msg
         self.ros2mqtt_tasks[mqtt_topic].converter = converter
         self.ros2mqtt_tasks[mqtt_topic].last_received_time = time.time()
-        self.ros2mqtt_tasks[mqtt_topic].commmunication_type = (
-            CommunicationType.TOPIC2TOPIC
-        )
+        self.ros2mqtt_tasks[
+            mqtt_topic
+        ].commmunication_type = CommunicationType.TOPIC2TOPIC
 
     def initialize_publish_rate(self, cfg: dict, publisher_key: str):
         if "rate" in cfg:
@@ -296,12 +296,12 @@ class ROSBridge:
                         f"[ROS Bridge] Successfully received Response [ROS][service]: {ros_service} with response:\n{response}"
                     )
                     self.ros2mqtt_tasks[mqtt_response_topic_name].msg = response
-                    self.ros2mqtt_tasks[mqtt_response_topic_name].converter = (
-                        "primitive"
-                    )
-                    self.ros2mqtt_tasks[mqtt_response_topic_name].last_received_time = (
-                        time.time()
-                    )
+                    self.ros2mqtt_tasks[
+                        mqtt_response_topic_name
+                    ].converter = "primitive"
+                    self.ros2mqtt_tasks[
+                        mqtt_response_topic_name
+                    ].last_received_time = time.time()
                     self.ros2mqtt_tasks[
                         mqtt_response_topic_name
                     ].commmunication_type = CommunicationType.TOPIC2SERVICE
