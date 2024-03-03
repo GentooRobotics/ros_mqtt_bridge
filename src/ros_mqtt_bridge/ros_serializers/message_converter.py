@@ -100,7 +100,7 @@ ros_header_types = ["Header", "std_msgs/Header", "roslib/Header"]
 def convert_dictionary_to_ros_message(
     message_type,
     dictionary,
-    kind="raw",
+    kind="message",
     strict_mode=True,
     check_missing_fields=False,
     check_types=True,
@@ -121,9 +121,7 @@ def convert_dictionary_to_ros_message(
         >>> convert_dictionary_to_ros_message(msg_type, dict_msg, kind)
         data: True
     """
-    if kind == "raw":
-        message = message_type()
-    elif kind == "message":
+    if kind == "message":
         message_class = roslib.message.get_message_class(message_type)
         message = message_class()
     elif kind == "request":

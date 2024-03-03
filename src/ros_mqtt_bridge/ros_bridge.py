@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 import rospy
 
 # others
-import hydra
+import roslib.message
 import json
 from omegaconf import DictConfig
 from .ros_serializers.message_converter import convert_dictionary_to_ros_message
@@ -73,7 +73,7 @@ class ROSBridge:
             mqtt_topic: str = ros2mqtt["mqtt_topic_name"]
             converter: str = ros2mqtt.get("converter", "")
             try:
-                ros_type = hydra.utils.get_class(ros_type_name)
+                ros_type = roslib.message.get_message_class(ros_type_name)
             except ModuleNotFoundError:
                 rospy.logerr(f"The ros message type {ros_type_name} could not be found")
                 raise
@@ -99,9 +99,9 @@ class ROSBridge:
         self.ros2mqtt_tasks[mqtt_topic].msg = msg
         self.ros2mqtt_tasks[mqtt_topic].converter = converter
         self.ros2mqtt_tasks[mqtt_topic].last_received_time = time.time()
-        self.ros2mqtt_tasks[
-            mqtt_topic
-        ].commmunication_type = CommunicationType.TOPIC2TOPIC
+        self.ros2mqtt_tasks[mqtt_topic].commmunication_type = (
+            CommunicationType.TOPIC2TOPIC
+        )
 
     def initialize_publish_rate(self, cfg: dict, publisher_key: str):
         if "rate" in cfg:
@@ -139,11 +139,13 @@ class ROSBridge:
             check_for_mqtt_2_ros_keys("ROS", mqtt_topic, topic2topic)
 
             ros_topic: str = topic2topic["ros_topic_name"]
-            ros_type_name: str = topic2topic["ros_type"]
+            ros_msg_type_name: str = topic2topic["ros_type"]
             try:
-                ros_type: MsgType = hydra.utils.get_class(ros_type_name)
+                ros_type: MsgType = roslib.message.get_message_class(ros_msg_type_name)
             except ModuleNotFoundError:
-                rospy.logerr(f"The ros message type {ros_type_name} could not be found")
+                rospy.logerr(
+                    f"The ros message type {ros_msg_type_name} could not be found"
+                )
                 raise
             self.ros_publishers[mqtt_topic] = rospy.Publisher(
                 name=ros_topic, data_class=ros_type, queue_size=1
@@ -172,11 +174,13 @@ class ROSBridge:
 
             ros_service: str = topic2service["ros_service_name"]
             mqtt_response_topic: str = topic2service["mqtt_response_topic_name"]
-            ros_type_name: str = topic2service["ros_type"]
+            ros_srv_type_name: str = topic2service["ros_type"]
             try:
-                ros_type: MsgType = hydra.utils.get_class(ros_type_name)
+                ros_type: MsgType = roslib.message.get_service_class(ros_srv_type_name)
             except ModuleNotFoundError:
-                rospy.logerr(f"The ros message type {ros_type_name} could not be found")
+                rospy.logerr(
+                    f"The ros service type {ros_srv_type_name} could not be found"
+                )
                 raise
             self.ros_service_clients[mqtt_request_topic] = rospy.ServiceProxy(
                 name=ros_service, service_class=ros_type
@@ -228,8 +232,9 @@ class ROSBridge:
                 ]["ros_type"]
                 self.ros_publishers[mqtt_receive_topic_name].publish(
                     convert_dictionary_to_ros_message(
-                        hydra.utils.get_class(ros_msg_typename),
+                        ros_msg_typename,
                         json.loads(mqtt2ros_item.payload),
+                        kind="message",
                     )
                 )
                 mqtt2ros_item.last_published_time = current_time
@@ -261,8 +266,9 @@ class ROSBridge:
 
                     try:
                         request = convert_dictionary_to_ros_message(
-                            hydra.utils.get_class(ros_srv_typename + "Request"),
+                            ros_srv_typename,
                             json.loads(mqtt2ros_item.payload),
+                            kind="request",
                         )
                     except AttributeError as e:
                         rospy.logerr(
@@ -290,12 +296,12 @@ class ROSBridge:
                         f"[ROS Bridge] Successfully received Response [ROS][service]: {ros_service} with response:\n{response}"
                     )
                     self.ros2mqtt_tasks[mqtt_response_topic_name].msg = response
-                    self.ros2mqtt_tasks[
-                        mqtt_response_topic_name
-                    ].converter = "primitive"
-                    self.ros2mqtt_tasks[
-                        mqtt_response_topic_name
-                    ].last_received_time = time.time()
+                    self.ros2mqtt_tasks[mqtt_response_topic_name].converter = (
+                        "primitive"
+                    )
+                    self.ros2mqtt_tasks[mqtt_response_topic_name].last_received_time = (
+                        time.time()
+                    )
                     self.ros2mqtt_tasks[
                         mqtt_response_topic_name
                     ].commmunication_type = CommunicationType.TOPIC2SERVICE

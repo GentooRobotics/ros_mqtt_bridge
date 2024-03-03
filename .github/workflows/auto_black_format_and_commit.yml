@@ -1,4 +1,4 @@
-name: auto_clang_format_and_commit
+name: auto_python_format_and_commit
 
 on: [push, workflow_dispatch]
     
@@ -6,3 +6,4 @@ on: [push, workflow_dispatch]
 jobs:
     black_format_and_commit:
         uses: GentooRobotics/shared_workflows/.github/workflows/black_format_and_commit.yml@main
+        secrets: inherit

@@ -10,12 +10,12 @@ ros2mqtt:
   topic2topic:
     /chatter:
       mqtt_topic_name: chatter
-      ros_type: std_msgs.msg.String
+      ros_type: std_msgs/String
       rate: 1
 
     /map_with_laser:
       mqtt_topic_name: map_with_laser
-      ros_type: sensor_msgs.msg.Image
+      ros_type: sensor_msgs/Image
       converter: image_serializer
 
 mqtt2ros:
@@ -23,12 +23,12 @@ mqtt2ros:
   topic2topic:
     number:
       ros_topic_name: /number
-      ros_type: std_msgs.msg.Int32
+      ros_type: std_msgs/Int32
       rate: 10
       
   topic2service:
     set_bool_request:
       ros_service_name: set_bool
-      ros_type: std_srvs.srv.SetBool
+      ros_type: std_srvs/SetBool
       mqtt_response_topic_name: set_bool_response
       timeout: 5
