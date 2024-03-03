@@ -1,4 +1,1 @@
-opencv-python 
-pytest
-paho-mqtt 
-hydra-core
+paho-mqtt == 1.6.1

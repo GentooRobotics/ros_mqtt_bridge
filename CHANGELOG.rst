@@ -2,6 +2,12 @@
 Changelog for package ros_mqtt_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.3.0 (2024-03-03)
+------------------
+* Fix bug for compound class type in ROS message
+* Remove hydra-core dependency
+* Drop support for Dockerfile
+
 0.2.0 (2024-01-07)
 ------------------
 * Fix bug for multiple ROS Service response

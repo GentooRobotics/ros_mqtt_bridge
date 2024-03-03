@@ -1,5 +1,5 @@
 ## ROS MQTT Bridge
-[![Version badge](https://img.shields.io/badge/Version-0.2.0-green.svg)](https://shields.io/)
+[![Version badge](https://img.shields.io/badge/Version-0.3.0-green.svg)](https://shields.io/)
 
 
 This is a ROS package that allows two ways bridging between ROS & MQTT protocols. MQTT Bridge supports 4 types of bridging.
@@ -17,12 +17,12 @@ ros2mqtt:
   topic2topic:
     /chatter: # ROS topic
       mqtt_topic_name: chatter # MQTT topic
-      ros_type: std_msgs.msg.String # ROS Message Type
+      ros_type: std_msgs/String # ROS Message Type
       rate: 1 # Optional maximum publishing rate
 
     /map_with_laser:
       mqtt_topic_name: map_with_laser
-      ros_type: sensor_msgs.msg.Image
+      ros_type: sensor_msgs/Image
       converter: image_serializer # Custom serialization
 ```
 
@@ -33,7 +33,7 @@ mqtt2ros:
   topic2topic:
     number: # MQTT topic 
       ros_topic_name: /number # ROS topic
-      ros_type: std_msgs.msg.Int32 # ROS Message type
+      ros_type: std_msgs/Int32 # ROS Message type
       rate: 1 # Optional rate parameters 
 
 ```
@@ -44,7 +44,7 @@ mqtt2ros:
   topic2service:
     backend/start_mapping: # MQTT topic 
       ros_service_name: /bt/start_mapping # ROS service
-      ros_type: std_srvs.srv.Trigger # ROS service type
+      ros_type: std_srvs/Trigger # ROS service type
       mqtt_response_topic_name: bt/start_mapping_response # MQTT response topic
 ```
 
@@ -56,8 +56,6 @@ To install the necessary dependencies, run the following command:
 ```sh
 pip3 install -r requirements.txt
 ```
-Similarly, a [Dockerfile](Dockerfile) is provided to setup the necessary requirements.
-
 
 ### Usage
 1. Move the `ros_mqtt_bridge` package into a workspace

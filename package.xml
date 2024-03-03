@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>ros_mqtt_bridge</name>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <description>The ros_pytest package</description>
 
   <author>Nelsen Edbert Winata</author>
-  <maintainer email="nelsenedbert@gmail.com">Nelsen Edbert Winata</maintainer>
+  <maintainer email="nelsen.edbert@gentoo.bot">Nelsen Edbert Winata</maintainer>
 
   <license>TODO</license>
   <buildtool_depend>catkin</buildtool_depend>
